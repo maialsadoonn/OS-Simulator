@@ -1,0 +1,378 @@
+#!/bin/bash
+
+echo "Deploying OS Simulator to GitHub Pages..."
+
+# Ensure git is installed
+if ! command -v git &> /dev/null
+then
+    echo "Git is not installed. Please install git to proceed."
+    exit
+fi
+
+# Push to GitHub Pages branch
+git init
+git add .
+git commit -m "Deploy OS Simulator"
+git branch -M gh-pages
+git remote add origin <your-github-repo-url>
+git push -u origin gh-pages
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>OS Simulator</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <div class="container">
+    <h1>OS Simulator</h1>
+
+    <!-- Section for CPU Scheduling -->
+    <section>
+      <h2>CPU Scheduling Simulator</h2>
+      <form id="cpuForm">
+        <label for="numProcesses">Number of Processes:</label>
+        <input type="number" id="numProcesses" min="1" max="10" required>
+        <button type="button" onclick="generateInputTable()">Generate Input Table</button>
+      </form>
+      <div id="processInput"></div>
+      <label for="algorithm">Choose Scheduling Algorithm:</label>
+      <select id="algorithm" onchange="toggleQuantumInput()">
+        <option value="fcfs">First Come First Serve (FCFS)</option>
+        <option value="sjf">Shortest Job First (SJF)</option>
+        <option value="priority">Priority Scheduling</option>
+        <option value="rr">Round Robin</option>
+      </select>
+      <div id="quantumInput" style="display: none;">
+        <label for="timeQuantum">Time Quantum:</label>
+        <input type="number" id="timeQuantum" min="1">
+      </div>
+      <button type="button" onclick="simulate()">Simulate</button>
+      <div id="output"></div>
+    </section>
+
+    <!-- Section for Banker's Algorithm -->
+    <section>
+      <h2>Banker's Algorithm Simulator</h2>
+      <form id="bankerForm">
+        <label for="numProcessesBanker">Number of Processes:</label>
+        <input type="number" id="numProcessesBanker" min="1" max="10" required>
+        <label for="numResources">Number of Resource Types:</label>
+        <input type="number" id="numResources" min="1" max="5" required>
+        <button type="button" onclick="generateBankerTable()">Generate Tables</button>
+      </form>
+      <div id="bankerTables"></div>
+      <button type="button" onclick="simulateBanker()">Check Safety</button>
+      <div id="bankerOutput"></div>
+    </section>
+
+    <!-- Section for Page Replacement -->
+    <section>
+      <h2>Page Replacement Simulator</h2>
+      <form id="pageForm">
+        <label for="numFrames">Number of Frames:</label>
+        <input type="number" id="numFrames" min="1" max="10" required>
+        <label for="pageString">Page Reference String (comma-separated):</label>
+        <input type="text" id="pageString" placeholder="e.g., 7, 0, 1, 2, 0, 3, 0">
+        <label for="replacementAlgo">Choose Replacement Algorithm:</label>
+        <select id="replacementAlgo">
+          <option value="fifo">FIFO</option>
+          <option value="lru">LRU</option>
+          <option value="optimal">Optimal</option>
+        </select>
+        <button type="button" onclick="simulatePageReplacement()">Simulate</button>
+      </form>
+      <div id="pageOutput"></div>
+    </section>
+
+  </div>
+  <script src="script.js"></script>
+</body>
+</html>
+
+body {
+  font-family: Arial, sans-serif;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  min-height: 100vh;
+  background: #f4f4f9;
+}
+
+.container {
+  background: #fff;
+  padding: 20px;
+  border-radius: 8px;
+  box-shadow: 0 4px 10px rgba(0, 0, 0, 0.1);
+  width: 80%;
+  max-width: 800px;
+}
+
+h1 {
+  text-align: center;
+  color: #333;
+}
+
+form, select, button {
+  margin: 10px 0;
+}
+
+button {
+  padding: 10px 15px;
+  background: #007bff;
+  color: #fff;
+  border: none;
+  border-radius: 4px;
+  cursor: pointer;
+}
+
+button:hover {
+  background: #0056b3;
+}
+
+table {
+  width: 100%;
+  border-collapse: collapse;
+  margin: 20px 0;
+}
+
+table, th, td {
+  border: 1px solid #ddd;
+}
+
+th, td {
+  padding: 10px;
+  text-align: center;
+}
+
+.gantt-chart {
+  display: flex;
+  justify-content: space-between;
+  margin: 20px 0;
+  background: #e9ecef;
+  border-radius: 8px;
+  padding: 10px;
+  font-size: 14px;
+  font-weight: bold;
+  color: #333;
+}
+
+function generateInputTable() {
+  const numProcesses = document.getElementById('numProcesses').value;
+  const processInputDiv = document.getElementById('processInput');
+
+  if (numProcesses <= 0) return;
+
+  let table = `<table>
+    <tr>
+      <th>Process</th>
+      <th>Arrival Time</th>
+      <th>Burst Time</th>
+      <th>Priority</th>
+    </tr>`;
+
+  for (let i = 0; i < numProcesses; i++) {
+    table += `<tr>
+      <td>P${i + 1}</td>
+      <td><input type="number" id="arrival${i}" min="0"></td>
+      <td><input type="number" id="burst${i}" min="1"></td>
+      <td><input type="number" id="priority${i}" min="1"></td>
+    </tr>`;
+  }
+  table += `</table>`;
+  processInputDiv.innerHTML = table;
+}
+
+function toggleQuantumInput() {
+  const algorithm = document.getElementById('algorithm').value;
+  const quantumInput = document.getElementById('quantumInput');
+  quantumInput.style.display = algorithm === 'rr' ? 'block' : 'none';
+}
+
+function simulate() {
+  const algorithm = document.getElementById('algorithm').value;
+  const numProcesses = document.getElementById('numProcesses').value;
+  const processes = [];
+
+  for (let i = 0; i < numProcesses; i++) {
+    const arrival = parseInt(document.getElementById(`arrival${i}`).value) || 0;
+    const burst = parseInt(document.getElementById(`burst${i}`).value) || 1;
+    const priority = parseInt(document.getElementById(`priority${i}`).value) || 1;
+
+    processes.push({ id: `P${i + 1}`, arrival, burst, priority });
+  }
+
+  let ganttChart = '';
+  let metrics = '';
+
+  if (algorithm === 'fcfs') {
+    ({ ganttChart, metrics } = simulateFCFS(processes));
+  } else if (algorithm === 'sjf') {
+    ({ ganttChart, metrics } = simulateSJF(processes));
+  } else if (algorithm === 'priority') {
+    ({ ganttChart, metrics } = simulatePriority(processes));
+  } else if (algorithm === 'rr') {
+    const timeQuantum = parseInt(document.getElementById('timeQuantum').value) || 1;
+    ({ ganttChart, metrics } = simulateRR(processes, timeQuantum));
+  }
+
+  document.getElementById('output').innerHTML = `
+    <h3>Gantt Chart</h3>
+    <div class="gantt-chart">${ganttChart}</div>
+    <h3>Performance Metrics</h3>
+    <div>${metrics}</div>
+  `;
+}
+
+function simulateFCFS(processes) {
+  processes.sort((a, b) => a.arrival - b.arrival);
+  let ganttChart = '';
+  let currentTime = 0;
+  let waitingTime = 0;
+  let turnaroundTime = 0;
+
+  processes.forEach((process) => {
+    if (currentTime < process.arrival) {
+      currentTime = process.arrival;
+    }
+    ganttChart += `[${currentTime}] ${process.id} `;
+    waitingTime += currentTime - process.arrival;
+    currentTime += process.burst;
+    turnaroundTime += currentTime - process.arrival;
+  });
+
+  ganttChart += `[${currentTime}]`;
+
+  return {
+    ganttChart,
+    metrics: `
+      <p>Average Waiting Time: ${(waitingTime / processes.length).toFixed(2)} ms</p>
+      <p>Average Turnaround Time: ${(turnaroundTime / processes.length).toFixed(2)} ms</p>
+    `,
+  };
+}
+
+// Implement SJF, Priority Scheduling, and RR similarly
+
+// Banker’s Algorithm
+function generateBankerTable() {
+  const numProcesses = document.getElementById('numProcessesBanker').value;
+  const numResources = document.getElementById('numResources').value;
+  const bankerTablesDiv = document.getElementById('bankerTables');
+
+  if (numProcesses <= 0 || numResources <= 0) return;
+
+  let maxTable = `<h3>Max Resources</h3><table><tr><th>Process</th>`;
+  let allocTable = `<h3>Allocated Resources</h3><table><tr><th>Process</th>`;
+  let availTable = `<h3>Available Resources</h3><table><tr><th>Resource</th>`;
+
+  for (let i = 0; i < numResources; i++) {
+    maxTable += `<th>R${i + 1}</th>`;
+    allocTable += `<th>R${i + 1}</th>`;
+    availTable += `<th>R${i + 1}</th>`;
+  }
+
+  maxTable += `</tr>`;
+  allocTable += `</tr>`;
+  availTable += `</tr><tr>`;
+
+  for (let i = 0; i < numProcesses; i++) {
+    maxTable += `<tr><td>P${i}</td>`;
+    allocTable += `<tr><td>P${i}</td>`;
+    for (let j = 0; j < numResources; j++) {
+      maxTable += `<td><input type="number" id="max${i}${j}" min="0"></td>`;
+      allocTable += `<td><input type="number" id="alloc${i}${j}" min="0"></td>`;
+    }
+    maxTable += `</tr>`;
+    allocTable += `</tr>`;
+  }
+
+  for (let j = 0; j < numResources; j++) {
+    availTable += `<td><input type="number" id="avail${j}" min="0"></td>`;
+  }
+
+  availTable += `</tr></table>`;
+  maxTable += `</table>`;
+  allocTable += `</table>`;
+
+  bankerTablesDiv.innerHTML = maxTable + allocTable + availTable;
+}
+
+function simulateBanker() {
+  const numProcesses = document.getElementById('numProcessesBanker').value;
+  const numResources = document.getElementById('numResources').value;
+
+  const max = [];
+  const alloc = [];
+  const avail = [];
+
+  for (let i = 0; i < numProcesses; i++) {
+    max.push([]);
+    alloc.push([]);
+    for (let j = 0; j < numResources; j++) {
+      max[i].push(parseInt(document.getElementById(`max${i}${j}`).value) || 0);
+      alloc[i].push(parseInt(document.getElementById(`alloc${i}${j}`).value) || 0);
+    }
+  }
+
+  for (let j = 0; j < numResources; j++) {
+    avail.push(parseInt(document.getElementById(`avail${j}`).value) || 0);
+  }
+
+  const safeSequence = bankerAlgorithm(max, alloc, avail);
+  document.getElementById('bankerOutput').innerHTML =
+    safeSequence.length > 0
+      ? `<p>Safe Sequence: ${safeSequence.join(' -> ')}</p>`
+      : `<p>The system is not in a safe state.</p>`;
+}
+
+function bankerAlgorithm(max, alloc, avail) {
+  const numProcesses = max.length;
+  const numResources = max[0].length;
+  const need = [];
+  const work = [...avail];
+  const finish = Array(numProcesses).fill(false);
+  const safeSequence = [];
+
+  for (let i = 0; i < numProcesses; i++) {
+    need.push([]);
+    for (let j = 0; j < numResources; j++) {
+      need[i].push(max[i][j] - alloc[i][j]);
+    }
+  }
+
+  while (safeSequence.length < numProcesses) {
+    let found = false;
+    for (let i = 0; i < numProcesses; i++) {
+      if (!finish[i]) {
+        let canFinish = true;
+        for (let j = 0; j < numResources; j++) {
+          if (need[i][j] > work[j]) {
+            canFinish = false;
+            break;
+          }
+        }
+        if (canFinish) {
+          for (let j = 0; j < numResources; j++) {
+            work[j] += alloc[i][j];
+          }
+          finish[i] = true;
+          safeSequence.push(`P${i}`);
+          found = true;
+        }
+      }
+    }
+    if (!found) break;
+  }
+
+  return finish.every((f) => f) ? safeSequence : [];
+}
+
+// Page Replacement Algorithms
+function simulatePageReplacement() {
+  const numFrames = parseInt(document.getElementById('numFrames').value);
+  const pageString = document.getElementById
